@@ -17,16 +17,10 @@ In search.py, you will implement generic search algorithms which are called by
 Pacman agents (in searchAgents.py).
 """
 
+from math import cos
 import re
 from tkinter import N
 import util
-from game import Directions
-
-S = Directions.SOUTH
-W = Directions.WEST
-N = Directions.NORTH
-E = Directions.EAST
-actions = {"South": S, "West": W, "North": N, "East": E}
 
 
 class SearchProblem:
@@ -77,6 +71,12 @@ def tinyMazeSearch(problem):
     Returns a sequence of moves that solves tinyMaze.  For any other maze, the
     sequence of moves will be incorrect, so only use this for tinyMaze.
     """
+    from game import Directions
+
+    S = Directions.SOUTH
+    W = Directions.WEST
+    N = Directions.NORTH
+    E = Directions.EAST
     return [S, S, W, S, W, W, S, W]
 
 
@@ -98,13 +98,13 @@ def depthFirstSearch(problem: SearchProblem):
     # print("Start:", problem.getStartState())
     # print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     # print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-    route = []
     stack = util.Stack()
     stack.push((problem.getStartState(), []))
     visit = set()
     while stack.isEmpty() is False:
         state, actions = stack.pop()
         if problem.isGoalState(state):
+            # visit.clear()
             return actions
         if state not in visit:
             visit.add(state)
@@ -118,12 +118,38 @@ def depthFirstSearch(problem: SearchProblem):
 def breadthFirstSearch(problem: SearchProblem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
+    queue = util.Queue()
+    queue.push((problem.getStartState(), []))
+    visit = set()
+    while queue.isEmpty() is False:
+        state, actions = queue.pop()
+        if problem.isGoalState(state):
+            return actions
+        if state not in visit:
+            visit.add(state)
+            for nextState, action, _ in problem.getSuccessors(state):
+                newActions = actions + [action]
+                queue.push((nextState, newActions))
+    return actions
     util.raiseNotDefined()
 
 
 def uniformCostSearch(problem: SearchProblem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
+    pqueue = util.PriorityQueue()
+    pqueue.update((problem.getStartState(), [], 0), 0)
+    visit = set()
+    while pqueue.isEmpty() is False:
+        state, actions, costs = pqueue.pop()
+        if problem.isGoalState(state):
+            return actions
+        if state not in visit:
+            visit.add(state)
+            for nextState, action, cost in problem.getSuccessors(state):
+                newActions = actions + [action]
+                pqueue.update((nextState, newActions, costs + cost), costs + cost)
+    return actions
     util.raiseNotDefined()
 
 
@@ -138,6 +164,31 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem: SearchProblem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
+    # heuristic = searchAgents.manhattanHeuristic
+    pqueue = util.PriorityQueue()
+    pqueue.update(
+        (problem.getStartState(), [], 0, heuristic(problem.getStartState(), problem)),
+        heuristic(problem.getStartState(), problem),
+    )
+    visit = set()
+    while pqueue.isEmpty() is False:
+        state, actions, g, h = pqueue.pop()
+        if problem.isGoalState(state):
+            return actions
+        if state not in visit:
+            visit.add(state)
+            for nextState, action, cost in problem.getSuccessors(state):
+                newActions = actions + [action]
+                pqueue.update(
+                    (
+                        nextState,
+                        newActions,
+                        g + cost,
+                        heuristic(nextState, problem),
+                    ),
+                    g + cost + heuristic(nextState, problem),
+                )
+    return actions
     util.raiseNotDefined()
 
 
