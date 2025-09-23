@@ -12,6 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+from hmac import new
 from mimetypes import init
 from util import manhattanDistance
 from game import Directions
@@ -291,7 +292,56 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
+        bestScore = float("-inf")
+        bestAction = gameState.getLegalActions(0)[0]
+        for action in gameState.getLegalActions(0):  # Pacman's turn (maximizing player)
+            successor = gameState.generateSuccessor(0, action)
+            score = self.value(successor, 1, 1)  # Move to the next agent (ghost)
+            if score > bestScore:
+                bestScore = score
+                bestAction = action
+        return bestAction
+        # return gameState.getLegalActions(0)[0]
         util.raiseNotDefined()
+
+    def value(self, gameState: GameState, depth: int, agentIndex: int):
+        if (
+            gameState.isWin()
+            or gameState.isLose()
+            or depth == self.depth * gameState.getNumAgents()
+        ):  # terminal state
+            return self.evaluationFunction(gameState)
+        if agentIndex == 0:  # Pacman's turn (maximizing player)
+            return self.max_value(gameState, depth, agentIndex)
+        else:  # Ghosts' turn (expectation players)
+            return self.exp_value(gameState, depth, agentIndex)
+
+    def max_value(self, gameState: GameState, depth: int, agentIndex: int):
+        initialize = float("-inf")
+        for action in gameState.getLegalActions(agentIndex):
+            successor = gameState.generateSuccessor(agentIndex, action)
+            initialize = max(
+                initialize,
+                self.value(
+                    successor,
+                    depth + 1,
+                    (agentIndex + 1) % gameState.getNumAgents(),
+                ),
+            )
+        return initialize
+
+    def exp_value(self, gameState: GameState, depth: int, agentIndex: int):
+        initialize = 0
+        actions = gameState.getLegalActions(agentIndex)
+        prob = 1 / len(actions) if actions else 0
+        for action in actions:
+            successor = gameState.generateSuccessor(agentIndex, action)
+            initialize += prob * self.value(
+                successor,
+                depth + 1,
+                (agentIndex + 1) % gameState.getNumAgents(),
+            )
+        return initialize
 
 
 def betterEvaluationFunction(currentGameState: GameState):
@@ -302,6 +352,25 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
+    score = currentGameState.getScore()
+    foodList = currentGameState.getFood().asList()
+    pacmanPos = currentGameState.getPacmanPosition()
+    ghostStates = currentGameState.getGhostStates()
+    minMD1 = (
+        min([manhattanDistance(pacmanPos, food) for food in foodList])
+        if foodList
+        else float("inf")
+    )
+    minMD2 = (
+        min(
+            [manhattanDistance(pacmanPos, ghost.getPosition()) for ghost in ghostStates]
+        )
+        if ghostStates
+        else float("inf")
+    )
+
+    return minMD2 / (minMD1**1.3) + score * 2
+    # return currentGameState.getScore()
     util.raiseNotDefined()
 
 
